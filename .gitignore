@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+dist/
+dist-electron/
+build/
+.vite/
+.next/
+.cache/
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.pyc
+*.log
