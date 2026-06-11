@@ -18,3 +18,5 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+_*.py
+debug_*.py

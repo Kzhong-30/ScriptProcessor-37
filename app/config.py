@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -5,7 +6,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "E-Commerce Recommendation System"
     APP_VERSION: str = "1.0.0"
 
-    DATABASE_URL: str = "postgresql+psycopg2://koillinjag@127.0.0.1:5432/recommendation_db"
+    DATABASE_URL: str = f"postgresql+psycopg2://{os.getenv('DB_USER', 'postgres')}@127.0.0.1:5432/recommendation_db"
 
     CF_WEIGHT: float = 0.6
     CONTENT_WEIGHT: float = 0.4
