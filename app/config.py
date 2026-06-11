@@ -23,3 +23,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings = Settings()
+settings = Settings()
+settings = Settings()
+settings = Settings()
+settings = Settings()

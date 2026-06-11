@@ -5,17 +5,28 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 from app.models import Product, Event, EVENT_WEIGHTS
+from app.cache import cache
+from app.config import settings
 
 
 class ContentBasedRecommender:
     def __init__(self, db: Session):
         self.db = db
-        self.product_idx_map: Dict[int, int] = {}
-        self.idx_product_map: Dict[int, int] = {}
-        self.product_data: Optional[pd.DataFrame] = None
-        self.tfidf_matrix: Optional[np.ndarray] = None
-        self.vectorizer: Optional[TfidfVectorizer] = None
-        self._build_features()
+        cached = cache.get("cb_model")
+        if cached is not None:
+            self.product_idx_map = cached.product_idx_map
+            self.idx_product_map = cached.idx_product_map
+            self.product_data = cached.product_data
+            self.tfidf_matrix = cached.tfidf_matrix
+            self.vectorizer = cached.vectorizer
+        else:
+            self.product_idx_map: Dict[int, int] = {}
+            self.idx_product_map: Dict[int, int] = {}
+            self.product_data: Optional[pd.DataFrame] = None
+            self.tfidf_matrix: Optional[np.ndarray] = None
+            self.vectorizer: Optional[TfidfVectorizer] = None
+            self._build_features()
+            cache.set("cb_model", self, settings.CACHE_TTL_SECONDS)
 
     def _tokenize_tags(self, tags: Optional[str]) -> str:
         if not tags:
@@ -104,9 +115,9 @@ class ContentBasedRecommender:
             interacted_ids.add(e.product_id)
 
         candidates = [
-            (self.idx_product_map[i], float(scores[i]))
+            (int(self.idx_product_map[i]), float(scores[i]))
             for i in range(len(scores))
-            if self.idx_product_map[i] not in interacted_ids
+            if int(self.idx_product_map[i]) not in interacted_ids
         ]
         candidates.sort(key=lambda x: x[1], reverse=True)
         return candidates[:top_n]
@@ -120,9 +131,9 @@ class ContentBasedRecommender:
         scores = cosine_similarity(product_vec, self.tfidf_matrix)[0]
 
         candidates = [
-            (self.idx_product_map[i], float(scores[i]))
+            (int(self.idx_product_map[i]), float(scores[i]))
             for i in range(len(scores))
-            if self.idx_product_map[i] != product_id
+            if int(self.idx_product_map[i]) != product_id
         ]
         candidates.sort(key=lambda x: x[1], reverse=True)
         return candidates[:top_n]
@@ -134,6 +145,11 @@ class ContentBasedRecommender:
             .filter(Event.user_id == user_id)
             .all()
         )
+        categories = set()
+        for e, cat in events:
+            if cat:
+                categories.add(cat)
+        return categories
         categories = set()
         for e, cat in events:
             if cat:

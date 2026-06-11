@@ -7,6 +7,7 @@ from scipy.sparse import csr_matrix
 from sqlalchemy.orm import Session
 from app.models import Event, Product, User, EVENT_WEIGHTS, EventType
 from app.config import settings
+from app.cache import cache
 
 
 class CollaborativeFiltering:

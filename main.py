@@ -13,6 +13,7 @@ from app.schemas import (
     TrendingProduct, TrendingResponse
 )
 from app.recommenders.hybrid import HybridRecommender
+from app.cache import cache
 
 Base.metadata.create_all(bind=engine)
 
@@ -106,6 +107,7 @@ def create_event(event: EventCreate, db: Session = Depends(get_db)):
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+    cache.invalidate_all()
     return db_event
 
 

@@ -6,6 +6,7 @@ from app.models import Event, Product, EVENT_WEIGHTS, EventType
 from app.recommenders.collaborative_filtering import CollaborativeFiltering
 from app.recommenders.content_based import ContentBasedRecommender
 from app.config import settings
+from app.cache import cache
 
 
 class HybridRecommender:
@@ -116,6 +117,10 @@ class HybridRecommender:
     def get_trending_products(
         self, top_n: int = 50
     ) -> List[Tuple[int, float]]:
+        cached = cache.get("trending_products")
+        if cached is not None:
+            return cached[:top_n]
+
         since = datetime.now() - timedelta(days=settings.TRENDING_WINDOW_DAYS)
 
         results = (
@@ -156,9 +161,14 @@ class HybridRecommender:
                     if len(scored) >= top_n:
                         break
 
+        cache.set("trending_products", scored, settings.CACHE_TTL_SECONDS)
         return scored[:top_n]
 
     def get_new_products(self, top_n: int = 50) -> List[Tuple[int, float]]:
+        cached = cache.get("new_products")
+        if cached is not None:
+            return cached[:top_n]
+
         since = datetime.now() - timedelta(days=settings.NEW_PRODUCT_WINDOW_DAYS)
         products = (
             self.db.query(Product)
@@ -184,6 +194,7 @@ class HybridRecommender:
             recency_score = 1.0 / (1.0 + age_days / settings.NEW_PRODUCT_WINDOW_DAYS)
             results.append((p.id, recency_score))
 
+        cache.set("new_products", results, settings.CACHE_TTL_SECONDS)
         return results
 
     def is_user_cold_start(self, user_id: int) -> bool:
